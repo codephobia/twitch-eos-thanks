@@ -1,0 +1,8 @@
+{
+    "twitch_client_id": "",
+    "twitch_oauth_token": "",
+    "twitch_channel_id": "codephobia",
+    "db_file_name": "codephobia.db",
+    "api_host": "localhost",
+    "api_port": "8000"
+}
