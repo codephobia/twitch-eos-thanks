@@ -1,2 +1,4 @@
 server/config.json
 server/server.exe
+server/*.db
+server/*.db.lock
