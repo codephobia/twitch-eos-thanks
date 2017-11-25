@@ -1,0 +1,8 @@
+{
+    "twitch_client_id": "",
+    "twitch_oauth_token": "",
+    "twitch_channel_id": "",
+    "db_file_name": "database.db",
+    "api_host": "localhost",
+    "api_port": "8000"
+}
