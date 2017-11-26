@@ -5,8 +5,8 @@ import(
     "encoding/json"
     "fmt"
     "io/ioutil"
-    "log"
     "net/http"
+    "strconv"
     "strings"
     "time"
     
@@ -16,19 +16,21 @@ import(
 
 var (
     TWITCH_API_URL       string = "https://api.twitch.tv/helix"
-    TWITCH_USERS_URL     string = "/users?id="
+    TWITCH_USERS_URL     string = "/users?"
     TWITCH_FOLLOWERS_URL string = "/users/follows?to_id="
+    
+    TWITCH_FOLLOWER_DB_BUCKET []string = []string{"twitch", "followers"}
 )
 
 type Twitch struct {
     config   *config.Config
     database *database.Database
     
-    Followers []Follower
+    Followers []*Follower
 }
 
 type FollowersResp struct {
-    Data       []Follower `json:"data"`
+    Data       []*Follower `json:"data"`
     Pagination struct {
         Cursor string
     }
@@ -37,18 +39,17 @@ type FollowersResp struct {
 type Follower struct {
     FollowerID string `json:"from_id"`
     FollowedAt string `json:"followed_at"`
-    UserData   TwitchUser
+    UserData   *TwitchUser
 }
 
 type UserResp struct {
-    Data []TwitchUser `json:"data"`
+    Data []*TwitchUser `json:"data"`
 }
 
 type TwitchUser struct {
-    User struct {
-        DisplayName     string `json:"display_name"`
-        ProfileImageUrl string `json:"profile_image_url"`        
-    } `json:"user"`
+    ID              string `json:"id"`
+    DisplayName     string `json:"display_name"`
+    ProfileImageUrl string `json:"profile_image_url"`        
 }
 
 // create twitch
@@ -72,8 +73,9 @@ func (t *Twitch) Get() error {
     }
     
     // save the followers to the database
-    
-    log.Printf("followers: %+v", t.Followers)
+    if err := t.saveFollowers(); err != nil {
+        return err
+    }
     
     return nil
 }
@@ -114,7 +116,7 @@ func (t *Twitch) getFollowers() error {
     
     for loop {
         // build out url
-        u := []string{TWITCH_API_URL, TWITCH_FOLLOWERS_URL, t.config.TwitchChannelID, "&first=", "100"}
+        u := []string{TWITCH_API_URL, TWITCH_FOLLOWERS_URL, t.config.TwitchChannelID, "&first=", strconv.Itoa(limit)}
         
         // check for cursor
         if len(cursor) > 0 {
@@ -132,7 +134,7 @@ func (t *Twitch) getFollowers() error {
         followerResp := &FollowersResp{}
         if err := json.NewDecoder(bytes.NewReader(body)).Decode(followerResp); err != nil {
             return fmt.Errorf("body decode: ", err)
-        }    
+        }
 
         // save followers to twitch struct
         t.Followers = append(t.Followers, followerResp.Data...)
@@ -154,11 +156,55 @@ func (t *Twitch) getFollowers() error {
     return nil
 }
 
+// find a twitch follower by id
+func (t *Twitch) findFollowerById(id string) (*Follower, error) {
+    for _, v := range t.Followers {
+        if v.FollowerID == id {
+            return v, nil
+        }
+    }
+    
+    return nil, fmt.Errorf("unable to find follower: %s", id)
+}
+
 func (t *Twitch) getFollowerUserData() error {
-    // loop through followers
+    // loop through followers to get ids
+    var ids []string
     for _, follower := range t.Followers {
+        ids = append(ids, follower.FollowerID)
+    }
+    
+    // loop through ids to get user data
+    loop := true
+    i := 0
+    limit := 100
+    
+    for loop {
+        // url ids
+        var urlIds []string
+
+        // create slice of ids for loop
+        start := i * limit
+        end := start + limit
+        
+        // check end to make sure it isn't larger than ids array
+        if end > len(ids) {
+            end = len(ids)
+        }
+        
+        // current loop ids
+        curIds := ids[start:end]
+        
+        // loop through ids to build out url strings
+        for _, id := range curIds {
+            urlIds = append(urlIds, strings.Join([]string{"id=", id}, ""))
+        }
+        
+        // combine url ids
+        urlIdsString := strings.Join(urlIds, "&")
+        
         // build out url
-        u := []string{TWITCH_API_URL, TWITCH_USERS_URL, follower.FollowerID}
+        u := []string{TWITCH_API_URL, TWITCH_USERS_URL, urlIdsString}
         url := strings.Join(u, "")
         
         // get user data from twitch
@@ -166,8 +212,6 @@ func (t *Twitch) getFollowerUserData() error {
         if err != nil {
             return err
         }
-        
-        log.Printf("body: %+v", string(body))
         
         // decode body
         userResp := &UserResp{}
@@ -180,13 +224,43 @@ func (t *Twitch) getFollowerUserData() error {
             return fmt.Errorf("no data: ", string(body))
         }
         
-        // update follower user data
-        follower.UserData = userResp.Data[0]
+        // loop through response users and assign to followers
+        for _, userData := range userResp.Data {
+            follower, err := t.findFollowerById(userData.ID)
+            if err != nil {
+                return err
+            }
+            
+            follower.UserData = userData
+        }
         
-        log.Printf("user: %+v", userResp.Data)
+        // check if we need to stop looping
+        if end >= len(ids) {
+            loop = false
+        }
         
+        // increase i
+        i++
+
         // sleep so we don't hammer twitch api
         time.Sleep(2 * time.Second)
+    }
+    
+    return nil
+}
+
+// the the followers to the database
+func (t *Twitch) saveFollowers() error {
+    // init the bucket
+    if err := t.database.InitBucket(TWITCH_FOLLOWER_DB_BUCKET); err != nil {
+        return fmt.Errorf("saving followers: ", err)
+    }
+    
+    for _, follower := range t.Followers {
+        // put the follower data
+        if err := t.database.Put(TWITCH_FOLLOWER_DB_BUCKET, follower.FollowerID, follower); err != nil {
+            return fmt.Errorf("saving follower [%s]: %+v", err)
+        }
     }
     
     return nil

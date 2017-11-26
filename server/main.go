@@ -44,10 +44,17 @@ func NewMain() (error, *Main) {
         return err, nil
     }
     
+    // api
+    api := api.NewApi(c, db, twitch)
+    if err := api.Init(); err != nil {
+        return err, nil
+    }
+    
     // return main
     return nil, &Main{
         config:   c,
         database: db,
         twitch:   twitch,
+        api:      api,
     }
 }
