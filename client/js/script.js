@@ -50,7 +50,7 @@ function init() {
             $.ajax({
                 url: host + "/shutdown"
             })
-            .done(function (followers) {
+            .done(function (data) {
                 waterfallCb(null, settings, followers);
             })
             .fail(function (err) {
