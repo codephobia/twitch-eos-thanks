@@ -148,7 +148,7 @@ func (db *Database) Get(buckets []string, key string) (error, []byte) {
 }
 
 // deep get array
-func (db *Database) GetMany(buckets []string, limit int) (error, [][]byte) {
+func (db *Database) GetAll(buckets []string) (error, [][]byte) {
     data := make([][]byte, 0)
     
     // make sure we have buckets
@@ -175,14 +175,12 @@ func (db *Database) GetMany(buckets []string, limit int) (error, [][]byte) {
             }
         }
         
-        cnt := 0
         c := bkt.Cursor()
         
         // loop through items in db
-        for k, v := c.Last(); k != nil && cnt < limit; k, v = c.Prev() {
+        for k, v := c.Last(); k != nil; k, v = c.Prev() {
             // append to data
             data = append(data, v)
-            cnt++
         }
         
         return nil

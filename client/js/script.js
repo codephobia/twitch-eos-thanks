@@ -5,20 +5,71 @@ $(document).ready(function () {
 
 // get the follower list from the api
 function init() {
-    $.ajax({
-        url: "http://localhost:8000/followers"
-    })
-    .done(function (data) {
-        start(data);
-    })
-    .fail(function () {
-        finish(0);
+    var host = "http://localhost:8000";
+
+    // waterfall
+    async.waterfall([
+        // check
+        function (waterfallCb) {
+            $.ajax({
+                url: host + "/check"
+            })
+            .done(function (data) {
+                waterfallCb(null);
+            })
+            .fail(function (err) {
+                console.log(err);
+                waterfallCb(err);
+            });
+        },
+        // settings
+        function (waterfallCb) {
+            $.ajax({
+                url: host + "/settings"
+            })
+            .done(function (settings) {
+                waterfallCb(null, settings);
+            })
+            .fail(function (err) {
+                waterfallCb(err);
+            });
+        },
+        function (settings, waterfallCb) {
+            $.ajax({
+                url: host + "/followers"
+            })
+            .done(function (followers) {
+                waterfallCb(null, settings, followers);
+            })
+            .fail(function (err) {
+                waterfallCb(err);
+            });
+        },
+        // shutdown
+        function (settings, followers, waterfallCb) {
+            $.ajax({
+                url: host + "/shutdown"
+            })
+            .done(function (followers) {
+                waterfallCb(null, settings, followers);
+            })
+            .fail(function (err) {
+                waterfallCb(err);
+            });
+        }
+    ], function (err, settings, followers) {
+        if (err) {
+            console.error(err);
+            finish(0);
+        } else {
+            start(settings, followers);
+        }
     });
 }
 
 // start showing followers
-function start(followers) {
-    var time = .5 * 60 * 1000;
+function start(settings, followers) {
+    var time = settings.clientTotalTime;
     var count = followers.length;
 
     // loop through followers
@@ -53,7 +104,7 @@ function finish(time) {
 function showFollower(follower, i) {
     var top, left;
     var user = $("<div>").addClass("user").attr("id", "user-"+i);
-    var username = $("<h1>").addClass("username").html(follower.UserData.display_name);
+    var username = $("<h1>").addClass("username").html(follower.display_name);
     var action = $("<h2>").addClass("action followed").html("FOLLOWED");
     
     user.append(username);

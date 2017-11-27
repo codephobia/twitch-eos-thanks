@@ -5,13 +5,17 @@ import(
     "encoding/json"
     "fmt"
     "io/ioutil"
+    "log"
     "net/http"
     "strconv"
     "strings"
     "time"
     
+    "encoding/base64"
+    
     config   "github.com/codephobia/twitch-eos-thanks/server/config"
     database "github.com/codephobia/twitch-eos-thanks/server/database"
+    util     "github.com/codephobia/twitch-eos-thanks/server/util"
 )
 
 var (
@@ -19,13 +23,16 @@ var (
     TWITCH_USERS_URL     string = "/users?"
     TWITCH_FOLLOWERS_URL string = "/users/follows?to_id="
     
-    TWITCH_FOLLOWER_DB_BUCKET []string = []string{"twitch", "followers"}
+    TWITCH_DB_BUCKET          []string = []string{"twitch"}
+    TWITCH_FOLLOWER_DB_BUCKET []string = append(TWITCH_DB_BUCKET, "followers")
 )
 
 type Twitch struct {
     config   *config.Config
     database *database.Database
-    
+    timer    *util.Timer
+        
+    cursor    string
     Followers []*Follower
 }
 
@@ -49,15 +56,38 @@ type UserResp struct {
 type TwitchUser struct {
     ID              string `json:"id"`
     DisplayName     string `json:"display_name"`
-    ProfileImageUrl string `json:"profile_image_url"`        
+    ProfileImageUrl string `json:"profile_image_url"`
 }
 
 // create twitch
-func NewTwitch(config *config.Config, database *database.Database) *Twitch {
-    return &Twitch{
-        config:   config,
-        database: database,
+func NewTwitch(c *config.Config, db *database.Database) (*Twitch, error) {
+    var cursor database.FollowerCursor
+
+    // init the bucket
+    if err := db.InitBucket(TWITCH_FOLLOWER_DB_BUCKET); err != nil {
+        return nil, fmt.Errorf("init twitch bucket: ", err)
     }
+    
+    // load the cursor from the database if it exists
+    err, curBytes := db.Get(TWITCH_DB_BUCKET, "cursor")
+    if err != nil {
+        return nil, fmt.Errorf("unable to load cursor from db: %s", err)
+    }
+    
+    // unmarshal cursor
+    if len(curBytes) > 0 {
+        if err := json.Unmarshal(curBytes, &cursor); err != nil {
+            return nil, fmt.Errorf("unable to unmarshal cursor from db: %s", err)
+        }
+    }
+    
+    // return new twitch struct
+    return &Twitch{
+        config:   c,
+        database: db,
+        
+        cursor:   cursor.Cursor,
+    }, nil
 }
 
 // get data from helix
@@ -76,6 +106,9 @@ func (t *Twitch) Get() error {
     if err := t.saveFollowers(); err != nil {
         return err
     }
+    
+    // run timer to poll twitch api
+    t.startTimer()
     
     return nil
 }
@@ -110,8 +143,9 @@ func (t *Twitch) getTwitchResponse(url string) ([]byte, error) {
 }
 
 func (t *Twitch) getFollowers() error {
-    cursor := ""
-    limit := 100
+    log.Printf("[INFO] getFollowers: checking twitch for followers")
+    
+    limit := 30
     loop := true
     
     for loop {
@@ -119,8 +153,8 @@ func (t *Twitch) getFollowers() error {
         u := []string{TWITCH_API_URL, TWITCH_FOLLOWERS_URL, t.config.TwitchChannelID, "&first=", strconv.Itoa(limit)}
         
         // check for cursor
-        if len(cursor) > 0 {
-            u = append(u, strings.Join([]string{"&after=", cursor}, ""))
+        if len(t.cursor) > 0 {
+            u = append(u, strings.Join([]string{"&after=", t.cursor}, ""))
         }
         url := strings.Join(u, "")
 
@@ -139,9 +173,16 @@ func (t *Twitch) getFollowers() error {
         // save followers to twitch struct
         t.Followers = append(t.Followers, followerResp.Data...)
         
-        // save cursor for next loop
-        cursor = followerResp.Pagination.Cursor
-
+        // save cursor for next loop, if we got results
+        if len(followerResp.Data) > 0 {
+            t.cursor = followerResp.Pagination.Cursor
+            log.Printf("[INFO] getFollowers: updating cursor: %s", t.cursor)
+            
+            base64Text := make([]byte, base64.StdEncoding.DecodedLen(len(t.cursor)))
+            l, _ := base64.StdEncoding.Decode(base64Text, []byte(t.cursor))
+            log.Printf("base64: %s\n", base64Text[:l])
+        }
+        
         // check if we need to keep looping
         cnt := len(followerResp.Data)
         if (cnt < limit) {
@@ -152,6 +193,13 @@ func (t *Twitch) getFollowers() error {
         // sleep so we don't hammer twitch api
         time.Sleep(2 * time.Second)
     }
+
+    log.Printf("[INFO] getFollowers: found [%d] new followers", len(t.Followers))
+    
+    // save the cursor to the database for next launch
+    t.database.Put(TWITCH_DB_BUCKET, "cursor", &database.FollowerCursor{
+        Cursor: t.cursor,
+    })
     
     return nil
 }
@@ -168,6 +216,11 @@ func (t *Twitch) findFollowerById(id string) (*Follower, error) {
 }
 
 func (t *Twitch) getFollowerUserData() error {
+    // check if we found followers
+    if len(t.Followers) == 0 {
+        return nil
+    }
+    
     // loop through followers to get ids
     var ids []string
     for _, follower := range t.Followers {
@@ -251,17 +304,43 @@ func (t *Twitch) getFollowerUserData() error {
 
 // the the followers to the database
 func (t *Twitch) saveFollowers() error {
-    // init the bucket
-    if err := t.database.InitBucket(TWITCH_FOLLOWER_DB_BUCKET); err != nil {
-        return fmt.Errorf("saving followers: ", err)
+    // check if we found followers
+    if len(t.Followers) == 0 {
+        return nil
     }
     
     for _, follower := range t.Followers {
+        // convert follower for db
+        dbFollower := &database.Follower{
+            ID:              follower.FollowerID,
+            FollowedAt:      follower.FollowedAt,
+            DisplayName:     follower.UserData.DisplayName,
+            ProfileImageUrl: follower.UserData.ProfileImageUrl,
+        }
+        
         // put the follower data
-        if err := t.database.Put(TWITCH_FOLLOWER_DB_BUCKET, follower.FollowerID, follower); err != nil {
+        if err := t.database.Put(TWITCH_FOLLOWER_DB_BUCKET, dbFollower.ID, dbFollower); err != nil {
             return fmt.Errorf("saving follower [%s]: %+v", err)
         }
     }
     
+    // reset the followers
+    t.Followers = make([]*Follower, 0)
+    
     return nil
+}
+
+// start a timer for twitch api polling
+func (t *Twitch) startTimer() {
+    d := 5 * time.Second
+    t.timer = util.NewTimer(d, false, t.cron)
+}
+
+// cron function run by timer
+func (t *Twitch) cron() {
+    // get twitch followers
+    err := t.Get()
+    if err != nil {
+        log.Printf("twitch cron: %s", err)
+    }
 }

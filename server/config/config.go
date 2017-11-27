@@ -17,6 +17,8 @@ type Config struct {
     DBFileName       string `json:"db_file_name"`
     ApiHost          string `json:"api_host"`
     ApiPort          string `json:"api_port"`
+    
+    ClientTotalTime  int    `json:"client_total_time"`
 }
 
 // create new config

@@ -39,7 +39,10 @@ func NewMain() (error, *Main) {
     }
     
     // twitch
-    twitch := twitch.NewTwitch(c, db)
+    twitch, err := twitch.NewTwitch(c, db)
+    if err != nil {
+        return err, nil
+    }
     if err := twitch.Get(); err != nil {
         return err, nil
     }
