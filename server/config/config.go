@@ -7,7 +7,7 @@ import (
 )
 
 var (
-    CONFIG_FILE string = "config.json"
+    CONFIG_FILE string = "./config.json"
 )
 
 type Config struct {
@@ -18,7 +18,9 @@ type Config struct {
     ApiHost          string `json:"api_host"`
     ApiPort          string `json:"api_port"`
     
-    ClientTotalTime  int    `json:"client_total_time"`
+    ClientTotalTime       int  `json:"client_total_time"`
+    ClientShowFollowers   bool `json:"client_show_followers"`
+    ClientShowSubscribers bool `json:"client_show_subscribers"`
 }
 
 // create new config
@@ -30,12 +32,12 @@ func NewConfig() *Config {
 func (c *Config) Load() error {
     configFile, err := os.Open(CONFIG_FILE)
     if err != nil {
-        return fmt.Errorf("config open: ", err)
+        return fmt.Errorf("config open: %s", err)
     }
     defer configFile.Close()
     
     if err := json.NewDecoder(configFile).Decode(c); err != nil {
-        return fmt.Errorf("config decode: ", err)
+        return fmt.Errorf("config decode: %s", err)
     }
     
     return nil

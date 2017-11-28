@@ -35,6 +35,13 @@ function init() {
             });
         },
         function (settings, waterfallCb) {
+            // check if we are showing followers
+            if (!settings.clientShowFollowers) {
+                waterfallCb(null, settings, []);
+                return;
+            }
+            
+            // get followers
             $.ajax({
                 url: host + "/followers"
             })
@@ -47,7 +54,7 @@ function init() {
         },
         // shutdown
         function (settings, followers, waterfallCb) {
-            $.ajax({
+            /*$.ajax({
                 url: host + "/shutdown"
             })
             .done(function (data) {
@@ -55,7 +62,8 @@ function init() {
             })
             .fail(function (err) {
                 waterfallCb(err);
-            });
+            });*/
+            waterfallCb(null, settings, followers);
         }
     ], function (err, settings, followers) {
         if (err) {
@@ -69,7 +77,7 @@ function init() {
 
 // start showing followers
 function start(settings, followers) {
-    var time = settings.clientTotalTime;
+    var time = (followers.length) ? settings.clientTotalTime : 0;
     var count = followers.length;
 
     // loop through followers

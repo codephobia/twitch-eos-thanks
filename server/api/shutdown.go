@@ -1,7 +1,7 @@
 package api
 
 import (
-    //"context"
+    "context"
     "encoding/json"
     "fmt"
     "net/http"
@@ -38,5 +38,8 @@ func (api *Api) handleShutdownGet(w http.ResponseWriter, r *http.Request) {
     enc := json.NewEncoder(w)
     enc.Encode(apiShutdown)
     
-    //api.server.Shutdown(context.Background())
+    // shutdown the server
+    go func() {
+        api.server.Shutdown(context.Background())
+    }()
 }

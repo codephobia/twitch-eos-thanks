@@ -21,7 +21,7 @@ func main() {
     err, _ := NewMain()
     
     if err != nil {
-        log.Fatal("[ERROR] main: ", err)
+        log.Fatal("[ERROR] main: %s", err)
     }
 }
 

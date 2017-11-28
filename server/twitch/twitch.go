@@ -11,17 +11,19 @@ import(
     "strings"
     "time"
     
-    "encoding/base64"
-    
     config   "github.com/codephobia/twitch-eos-thanks/server/config"
     database "github.com/codephobia/twitch-eos-thanks/server/database"
     util     "github.com/codephobia/twitch-eos-thanks/server/util"
 )
 
 var (
-    TWITCH_API_URL       string = "https://api.twitch.tv/helix"
-    TWITCH_USERS_URL     string = "/users?"
-    TWITCH_FOLLOWERS_URL string = "/users/follows?to_id="
+    TWITCH_API_DELAY          time.Duration = 500 * time.Millisecond
+    TWITCH_API_CRON_DURATION  time.Duration = 5 * time.Minute
+    TWITCH_API_FOLLOWER_LIMIT int           = 100
+    TWITCH_API_USER_LIMIT     int           = 100
+    
+    TWITCH_HELIX_USERS_URL     string = "/users?"
+    TWITCH_HELIX_FOLLOWERS_URL string = "/users/follows?to_id="
     
     TWITCH_DB_BUCKET          []string = []string{"twitch"}
     TWITCH_FOLLOWER_DB_BUCKET []string = append(TWITCH_DB_BUCKET, "followers")
@@ -113,19 +115,28 @@ func (t *Twitch) Get() error {
     return nil
 }
 
-func (t *Twitch) getTwitchResponse(url string) ([]byte, error) {
+func (t *Twitch) getTwitchResponse(version TwitchVersion, urlSuffix string) ([]byte, error) {
     // create http client
     client := &http.Client{}
 
+    // build url with version prefix / suffix
+    url := strings.Join([]string{version.Url(), urlSuffix}, "")
+    
     // create new request
     req, err := http.NewRequest("GET", url, nil)
     if err != nil {
         return nil, fmt.Errorf("error generating request: %v", err)
     }
 
-    // add client id to headers
+    // add oauth token and client id to headers
+    req.Header.Add("Authorization", t.config.TwitchOAuthToken)
     req.Header.Add("Client-ID", t.config.TwitchClientID)
 
+    // add accept header for V5 api calls
+    if version == TwitchV5 {
+        req.Header.Add("Accept", "application/vnd.twitchtv.v5+json")
+    }
+    
     // do get request
     resp, err := client.Do(req)
     if err != nil {
@@ -145,12 +156,11 @@ func (t *Twitch) getTwitchResponse(url string) ([]byte, error) {
 func (t *Twitch) getFollowers() error {
     log.Printf("[INFO] getFollowers: checking twitch for followers")
     
-    limit := 30
     loop := true
-    
+
     for loop {
         // build out url
-        u := []string{TWITCH_API_URL, TWITCH_FOLLOWERS_URL, t.config.TwitchChannelID, "&first=", strconv.Itoa(limit)}
+        u := []string{TWITCH_HELIX_FOLLOWERS_URL, t.config.TwitchChannelID, "&first=", strconv.Itoa(TWITCH_API_FOLLOWER_LIMIT)}
         
         // check for cursor
         if len(t.cursor) > 0 {
@@ -159,7 +169,7 @@ func (t *Twitch) getFollowers() error {
         url := strings.Join(u, "")
 
         // get followers from twitch
-        body, err := t.getTwitchResponse(url)
+        body, err := t.getTwitchResponse(TwitchHelix, url)
         if err != nil {
             return err
         }
@@ -177,21 +187,17 @@ func (t *Twitch) getFollowers() error {
         if len(followerResp.Data) > 0 {
             t.cursor = followerResp.Pagination.Cursor
             log.Printf("[INFO] getFollowers: updating cursor: %s", t.cursor)
-            
-            base64Text := make([]byte, base64.StdEncoding.DecodedLen(len(t.cursor)))
-            l, _ := base64.StdEncoding.Decode(base64Text, []byte(t.cursor))
-            log.Printf("base64: %s\n", base64Text[:l])
         }
         
         // check if we need to keep looping
         cnt := len(followerResp.Data)
-        if (cnt < limit) {
+        if (cnt < TWITCH_API_FOLLOWER_LIMIT) {
             // stop loop
             loop = false
         }
 
         // sleep so we don't hammer twitch api
-        time.Sleep(2 * time.Second)
+        time.Sleep(TWITCH_API_DELAY)
     }
 
     log.Printf("[INFO] getFollowers: found [%d] new followers", len(t.Followers))
@@ -230,15 +236,14 @@ func (t *Twitch) getFollowerUserData() error {
     // loop through ids to get user data
     loop := true
     i := 0
-    limit := 100
     
     for loop {
         // url ids
         var urlIds []string
 
         // create slice of ids for loop
-        start := i * limit
-        end := start + limit
+        start := i * TWITCH_API_USER_LIMIT
+        end := start + TWITCH_API_USER_LIMIT
         
         // check end to make sure it isn't larger than ids array
         if end > len(ids) {
@@ -257,11 +262,11 @@ func (t *Twitch) getFollowerUserData() error {
         urlIdsString := strings.Join(urlIds, "&")
         
         // build out url
-        u := []string{TWITCH_API_URL, TWITCH_USERS_URL, urlIdsString}
+        u := []string{TWITCH_HELIX_USERS_URL, urlIdsString}
         url := strings.Join(u, "")
         
         // get user data from twitch
-        body, err := t.getTwitchResponse(url)
+        body, err := t.getTwitchResponse(TwitchHelix, url)
         if err != nil {
             return err
         }
@@ -296,7 +301,7 @@ func (t *Twitch) getFollowerUserData() error {
         i++
 
         // sleep so we don't hammer twitch api
-        time.Sleep(2 * time.Second)
+        time.Sleep(TWITCH_API_DELAY)
     }
     
     return nil
@@ -332,8 +337,7 @@ func (t *Twitch) saveFollowers() error {
 
 // start a timer for twitch api polling
 func (t *Twitch) startTimer() {
-    d := 5 * time.Second
-    t.timer = util.NewTimer(d, false, t.cron)
+    t.timer = util.NewTimer(TWITCH_API_CRON_DURATION, false, t.cron)
 }
 
 // cron function run by timer
