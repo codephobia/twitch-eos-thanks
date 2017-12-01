@@ -3,10 +3,10 @@ package api
 import (
     "encoding/json"
     "fmt"
+    "log"
     "net/http"
-    
-    database "github.com/codephobia/twitch-eos-thanks/server/database"
-    twitch   "github.com/codephobia/twitch-eos-thanks/server/twitch"
+    "regexp"
+    "strconv"
 )
 
 // handleFollowers
@@ -23,33 +23,53 @@ func (api *Api) handleFollowers() http.Handler {
 
 // handleFollowersGet
 func (api *Api) handleFollowersGet(w http.ResponseWriter, r *http.Request) {
-    // followers to return
-    followers := make([]database.Follower, 0)
+    var (
+        LIMIT_DEFAULT  int = 20
+        LIMIT_MAX      int = 100
+        OFFSET_MAX     int = 100
+    )
+    
+    // get query vars
+    v := r.URL.Query()
+    
+    // get vars
+    channelID := v.Get("channelID")
+    limit, _ := strconv.Atoi(v.Get("limit"))
+    offset, _ := strconv.Atoi(v.Get("offset"))
+    
+    // check channel id
+    matched, err := regexp.MatchString("[0-9]+", channelID)
+    if (err != nil || !matched) {
+        api.handleError(w, 422, fmt.Errorf("invalid channel id"))
+        return
+    }
+    
+    // make sure we have at least default value for limit
+    if limit == 0 {
+        limit = LIMIT_DEFAULT
+    }
+    
+    // check limit
+    if (limit > LIMIT_MAX) {
+        limit = LIMIT_MAX
+    }
+    
+    // check offset
+    if (offset > OFFSET_MAX) {
+        offset = OFFSET_MAX
+    }
     
     // add headers to response
     w.Header().Add("Content-Type", "application/json")
     w.WriteHeader(http.StatusOK)
     
-    // load follower data from db
-    err, dbFollowers := api.database.GetAll(twitch.TWITCH_FOLLOWER_DB_BUCKET)
+    // get followers
+    followers, err := api.database.GetFollowers(channelID, limit, offset)
     if err != nil {
-        api.handleError(w, 500, err)
-        return
+        log.Printf("[ERROR] get followers: %s", err)
     }
     
-    // unmarshal db followers
-    for _, dbFollower := range dbFollowers {
-        var follower database.Follower
-        if err := json.Unmarshal(dbFollower, &follower); err != nil {
-            api.handleError(w, 500, err)
-            return
-        }
-
-        // append to followers returned
-        followers = append(followers, follower)
-    }
-    
-    // encode the followers
+    // return followers
     enc := json.NewEncoder(w)
     enc.Encode(followers)
 }

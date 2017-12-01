@@ -1,4 +1,6 @@
+app/config.json
+app/app.exe
+app/*.db
+app/*.db.lock
+
 server/config.json
-server/server.exe
-server/*.db
-server/*.db.lock

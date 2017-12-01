@@ -1,0 +1,11 @@
+{
+    "twitch_client_id": "",
+    "twitch_oauth_token": "",
+    "twitch_channel_id": "",
+    "db_file_name": "database.db",
+    "api_host": "localhost",
+    "api_port": "8000",
+    "client_total_time": 60000,
+    "client_show_followers": true,
+    "client_show_subscribers": true
+}

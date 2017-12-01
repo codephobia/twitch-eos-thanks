@@ -14,26 +14,25 @@ import (
     
     config   "github.com/codephobia/twitch-eos-thanks/server/config"
     database "github.com/codephobia/twitch-eos-thanks/server/database"
-    twitch   "github.com/codephobia/twitch-eos-thanks/server/twitch"
 )
 
+// api struct
 type Api struct {
     config   *config.Config
     database *database.Database
-    twitch   *twitch.Twitch
     
     server   *http.Server
-    listener *net.TCPListener
 }
 
-func NewApi(config *config.Config, database *database.Database, twitch *twitch.Twitch) *Api {
+// create new api
+func NewApi(c *config.Config, db *database.Database) *Api {
     return &Api{
-        config: config,
-        database: database,
-        twitch: twitch,
+        config:   c,
+        database: db,
     }
 }
 
+// init api
 func (api *Api) Init() error {
     // create the server
     api.server = &http.Server{
@@ -58,20 +57,15 @@ func (api *Api) Init() error {
 
 func (api *Api) Handler() http.Handler {
     // create router
-    r := mux.NewRouter()
+    r := mux.NewRouter()    
     
-    // check
-    r.Handle("/check", api.handleCheck())
-    
-    // settings
-    r.Handle("/settings", api.handleSettings())
-    
-    // followers
+    // follow webhook
+    r.Handle("/follow", api.handleFollow())
+
+    // get followers
     r.Handle("/followers", api.handleFollowers())
-    
-    // shutdown
-    r.Handle("/shutdown", api.handleShutdown())
-    
+
+    // return router
     return r
 }
 

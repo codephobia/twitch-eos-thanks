@@ -11,16 +11,12 @@ var (
 )
 
 type Config struct {
-    TwitchClientID   string `json:"twitch_client_id"`
-    TwitchOAuthToken string `json:"twitch_oauth_token"`
-    TwitchChannelID  string `json:"twitch_channel_id"`
-    DBFileName       string `json:"db_file_name"`
-    ApiHost          string `json:"api_host"`
-    ApiPort          string `json:"api_port"`
+    MongoDBHost     string `json:"mongo_db_host"`
+    MongoDBPort     string `json:"mongo_db_port"`
+    MongoDBDatabase string `json:"mongo_db_database"`
     
-    ClientTotalTime       int  `json:"client_total_time"`
-    ClientShowFollowers   bool `json:"client_show_followers"`
-    ClientShowSubscribers bool `json:"client_show_subscribers"`
+    ApiHost string `json:"api_host"`
+    ApiPort string `json:"api_port"`
 }
 
 // create new config
