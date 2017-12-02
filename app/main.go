@@ -46,7 +46,7 @@ func NewMain() (error, *Main) {
     if err := db.Init(); err != nil {
         return err, nil
     }
-    
+
     // twitch
     twitch, err := twitch.NewTwitch(c, db)
     if err != nil {
@@ -55,7 +55,7 @@ func NewMain() (error, *Main) {
     if err := twitch.Get(); err != nil {
         return err, nil
     }
-    
+
     // api
     api := api.NewApi(c, db, twitch)
     if err := api.Init(); err != nil {

@@ -6,7 +6,3 @@ type Follower struct {
     DisplayName     string `json:"display_name"`
     ProfileImageUrl string `json:"profile_image_url"`
 }
-
-type FollowerCursor struct {
-    Cursor string `json:"cursor"`
-}

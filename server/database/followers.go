@@ -2,6 +2,8 @@ package database
 
 import (
     "fmt"
+    "time"
+    "log"
     
     "gopkg.in/mgo.v2/bson"
 )
@@ -10,7 +12,7 @@ type Follower struct {
     ID         bson.ObjectId `bson:"_id,omitempty" json:"ID,omitempty"`
     ChannelID  string        `bson:"channel_id,omitempty" json:"channelID,omitempty"`
     FollowerID string        `bson:"follower_id,omitempty" json:"followerID,omitempty"`
-    Timestamp  string        `bson:"timestamp,omitempty" json:"timestamp,omitempty"`
+    Timestamp  time.Time     `bson:"timestamp,omitempty" json:"timestamp,omitempty"`
 }
 
 // add follower
@@ -63,12 +65,20 @@ func (db *Database) RemoveFollower(f *Follower) error {
 }
 
 // get followers
-func (db *Database) GetFollowers(channelID string, limit int, offset int) ([]*Follower, error) {
+func (db *Database) GetFollowers(channelID string, latest int64, limit int, offset int) ([]*Follower, error) {
     followers := make([]*Follower, 0)
+
+    // convert latest to time
+    ltUnix := latest / (int64(time.Millisecond) * int64(time.Nanosecond) * 1000)
+    ltNano := latest % (int64(time.Millisecond) * int64(time.Nanosecond) * 1000)
+    lt := time.Unix(ltUnix, ltNano)
     
     // build query
     query := db.followers.Find(bson.M{
         "channel_id": channelID,
+        "timestamp": bson.M{
+            "$gt": lt,
+        },
     })
     
     // add filters

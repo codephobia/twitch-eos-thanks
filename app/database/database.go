@@ -188,3 +188,41 @@ func (db *Database) GetAll(buckets []string) (error, [][]byte) {
     
     return err, data
 }
+
+// return count of keys in bucket
+func (db *Database) Count(buckets []string) (int, error) {
+    // default count to zero
+    count := 0
+    
+    // make sure we have buckets
+    if len(buckets) == 0 {
+        return count, fmt.Errorf("count: bucket required")
+    }
+    
+    // tx
+    err := db.boltDB.View(func(tx *bolt.Tx) error {
+        var bkt *bolt.Bucket
+        
+        // iterate through the buckets
+        for i, bucket := range buckets {
+            // if first bucket, load from tx
+            if i == 0 {
+                bkt = tx.Bucket([]byte(bucket))
+            } else {
+                bkt = bkt.Bucket([]byte(bucket))
+            }
+            
+            // check for errors
+            if bkt == nil {
+                return fmt.Errorf("count: error selecting bucket: %s", bucket)
+            }
+        }
+        
+        // set count
+        count = bkt.Stats().KeyN
+        
+        return nil
+    })
+    
+    return count, err
+}

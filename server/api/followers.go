@@ -9,6 +9,10 @@ import (
     "strconv"
 )
 
+type DataResp struct {
+    Data interface{} `json:"data"`
+}
+
 // handleFollowers
 func (api *Api) handleFollowers() http.Handler {
     return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -36,6 +40,7 @@ func (api *Api) handleFollowersGet(w http.ResponseWriter, r *http.Request) {
     channelID := v.Get("channelID")
     limit, _ := strconv.Atoi(v.Get("limit"))
     offset, _ := strconv.Atoi(v.Get("offset"))
+    latest, _ := strconv.ParseInt(v.Get("latest"), 10, 64)
     
     // check channel id
     matched, err := regexp.MatchString("[0-9]+", channelID)
@@ -64,12 +69,14 @@ func (api *Api) handleFollowersGet(w http.ResponseWriter, r *http.Request) {
     w.WriteHeader(http.StatusOK)
     
     // get followers
-    followers, err := api.database.GetFollowers(channelID, limit, offset)
+    followers, err := api.database.GetFollowers(channelID, latest, limit, offset)
     if err != nil {
         log.Printf("[ERROR] get followers: %s", err)
     }
     
     // return followers
     enc := json.NewEncoder(w)
-    enc.Encode(followers)
+    enc.Encode(&DataResp{
+        Data: followers,
+    })
 }

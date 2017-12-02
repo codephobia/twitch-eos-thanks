@@ -11,12 +11,14 @@ var (
 )
 
 type Config struct {
-    TwitchClientID   string `json:"twitch_client_id"`
-    TwitchOAuthToken string `json:"twitch_oauth_token"`
-    TwitchChannelID  string `json:"twitch_channel_id"`
-    DBFileName       string `json:"db_file_name"`
-    ApiHost          string `json:"api_host"`
-    ApiPort          string `json:"api_port"`
+    TwitchClientID    string `json:"twitch_client_id"`
+    TwitchOAuthToken  string `json:"twitch_oauth_token"`
+    TwitchChannelID   string `json:"twitch_channel_id"`
+    DBFileName        string `json:"db_file_name"`
+    ApiHost           string `json:"api_host"`
+    ApiPort           string `json:"api_port"`
+    CodephobiaApiHost string `json:"codephobia_api_host"`
+    CodephobiaApiPort string `json:"codephobia_api_port"`
     
     ClientTotalTime       int  `json:"client_total_time"`
     ClientShowFollowers   bool `json:"client_show_followers"`

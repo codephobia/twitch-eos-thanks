@@ -5,6 +5,8 @@
     "db_file_name": "database.db",
     "api_host": "localhost",
     "api_port": "8000",
+    "codephobia_api_host": "api.codephobia.com",
+    "codephobia_api_port": "80",
     "client_total_time": 60000,
     "client_show_followers": true,
     "client_show_subscribers": true
