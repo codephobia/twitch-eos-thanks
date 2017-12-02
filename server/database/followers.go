@@ -3,7 +3,6 @@ package database
 import (
     "fmt"
     "time"
-    "log"
     
     "gopkg.in/mgo.v2/bson"
 )
