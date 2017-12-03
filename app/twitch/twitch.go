@@ -28,7 +28,8 @@ type Twitch struct {
     database *database.Database
     timer    *util.Timer
         
-    Followers []*Follower
+    Followers       []*Follower
+    StreamStartTime time.Time
 }
 
 // create twitch
@@ -47,6 +48,13 @@ func NewTwitch(c *config.Config, db *database.Database) (*Twitch, error) {
 
 // get data from helix
 func (t *Twitch) Get() error {
+    // get stream start time
+    if streamTime, err := t.getStreamStart(); err != nil {
+        return err
+    } else {
+        t.StreamStartTime = streamTime
+    }
+    
     // get follower ids
     if err := t.getFollowers(); err != nil {
         return err

@@ -4,6 +4,7 @@ import (
     "encoding/json"
     "fmt"
     "path"
+    "time"
     
     bolt "github.com/boltdb/bolt"
     
@@ -153,7 +154,7 @@ func (db *Database) GetAll(buckets []string) (error, [][]byte) {
     
     // make sure we have buckets
     if len(buckets) == 0 {
-        return fmt.Errorf("get many: bucket required"), data
+        return fmt.Errorf("get all: bucket required"), data
     }
     
     // tx
@@ -171,7 +172,7 @@ func (db *Database) GetAll(buckets []string) (error, [][]byte) {
             
             // check for errors
             if bkt == nil {
-                return fmt.Errorf("get many: error selecting bucket: %s", bucket)
+                return fmt.Errorf("get all: error selecting bucket: %s", bucket)
             }
         }
         
@@ -181,6 +182,65 @@ func (db *Database) GetAll(buckets []string) (error, [][]byte) {
         for k, v := c.Last(); k != nil; k, v = c.Prev() {
             // append to data
             data = append(data, v)
+        }
+        
+        return nil
+    })
+    
+    return err, data
+}
+
+// deep get array since time
+func (db *Database) GetAllSince(buckets []string, since time.Time, timeKey string) (error, [][]byte) {
+    data := make([][]byte, 0)
+    
+    // make sure we have buckets
+    if len(buckets) == 0 {
+        return fmt.Errorf("get all since: bucket required"), data
+    }
+    
+    // tx
+    err := db.boltDB.View(func(tx *bolt.Tx) error {
+        var bkt *bolt.Bucket
+        
+        // iterate through the buckets
+        for i, bucket := range buckets {
+            // if first bucket, load from tx
+            if i == 0 {
+                bkt = tx.Bucket([]byte(bucket))
+            } else {
+                bkt = bkt.Bucket([]byte(bucket))
+            }
+            
+            // check for errors
+            if bkt == nil {
+                return fmt.Errorf("get all since: error selecting bucket: %s", bucket)
+            }
+        }
+        
+        c := bkt.Cursor()
+        
+        // loop through items in db
+        for k, v := c.Last(); k != nil; k, v = c.Prev() {
+            var entry map[string]interface{}
+            
+            // unmarshal the entry
+            if err := json.Unmarshal(v, &entry); err != nil {
+                return fmt.Errorf("get all since: error unmarshalling entry: %s", err)
+            }
+            
+            // convert entry string to time
+            entryTime, err := time.Parse(time.RFC3339, entry[timeKey].(string))
+            if err != nil {
+                return fmt.Errorf("get all since: error converting time: %s", err)
+            }
+            
+            // if time is before since
+            if entryTime.After(since) {
+                // append to data
+                data = append(data, v)
+            }
+            
         }
         
         return nil

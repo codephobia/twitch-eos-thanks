@@ -9,5 +9,6 @@
     "codephobia_api_port": "80",
     "client_total_time": 60000,
     "client_show_followers": true,
-    "client_show_subscribers": true
+    "client_show_subscribers": true,
+    "client_show_current_stream": true
 }

@@ -30,11 +30,30 @@ func (api *Api) handleFollowersGet(w http.ResponseWriter, r *http.Request) {
     w.Header().Add("Content-Type", "application/json")
     w.WriteHeader(http.StatusOK)
     
-    // load follower data from db
-    err, dbFollowers := api.database.GetAll(twitch.TWITCH_FOLLOWER_DB_BUCKET)
-    if err != nil {
-        api.handleError(w, 500, err)
-        return
+    // db followers
+    dbFollowers := make([][]byte, 0)
+    
+    // if limiting followers to current stream
+    if api.config.ClientShowCurrentStream {
+        // get current stream followers from db
+        err, f := api.database.GetAllSince(twitch.TWITCH_FOLLOWER_DB_BUCKET, api.twitch.StreamStartTime, "followed_at")
+        if err != nil {
+            api.handleError(w, 500, err)
+            return
+        }
+        
+        // set followers
+        dbFollowers = f
+    } else {
+        // load all followers from db
+        err, f := api.database.GetAll(twitch.TWITCH_FOLLOWER_DB_BUCKET)
+        if err != nil {
+            api.handleError(w, 500, err)
+            return
+        }
+        
+        // set followers
+        dbFollowers = f
     }
     
     // unmarshal db followers

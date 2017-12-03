@@ -7,19 +7,6 @@ import (
     "strings"
 )
 
-// follower list response
-type FollowersResp struct {
-    Data []struct {
-        FollowerID string `json:"followerID"`
-        Timestamp  string `json:"timestamp"`        
-    } `json:"data"`
-}
-
-// twitch user response
-type UserResp struct {
-    Data []*TwitchUser `json:"data"`
-}
-
 // hit codephobia api for follower list
 func (t *Twitch) getApiResponse(url string) ([]byte, error) {
     // create http client
