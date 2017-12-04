@@ -20,7 +20,8 @@ type Config struct {
     CodephobiaApiHost string `json:"codephobia_api_host"`
     CodephobiaApiPort string `json:"codephobia_api_port"`
     
-    ClientTotalTime         int  `json:"client_total_time"`
+    ClientTimeTotal         int  `json:"client_time_total"`
+    ClientTimePer           int  `json:"client_time_per"`
     ClientShowFollowers     bool `json:"client_show_followers"`
     ClientShowSubscribers   bool `json:"client_show_subscribers"`
     ClientShowCurrentStream bool `json:"client_show_current_stream"`

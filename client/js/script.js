@@ -18,7 +18,6 @@ function init() {
                 waterfallCb(null);
             })
             .fail(function (err) {
-                console.log(err);
                 waterfallCb(err);
             });
         },
@@ -77,14 +76,23 @@ function init() {
 
 // start showing followers
 function start(settings, followers) {
-    var time = (followers.length) ? settings.clientTotalTime : 0;
+    // number of followers
     var count = followers.length;
+    
+    // time length of outro in milliseconds
+    var time = (count) ? settings.clientTimeTotal : 0;
+
+    // reduce time based on follower count and time per
+    // this keeps the outro from having too much time betwen followers
+    if ((settings.clientTimePer * count) < settings.clientTimeTotal) {
+        time = settings.clientTimePer * count;
+    }
+    
+    // interval between each follower
+    var interval = time / count;
 
     // loop through followers
     for (var i = 0; i < followers.length; i++) {
-        // interval between each follower
-        var interval = time / count;
-        
         // time to show this follower
         var t = Math.floor(interval * i);
         
@@ -99,8 +107,8 @@ function start(settings, followers) {
     finish(time);
 }
 
-function finish(time) {
 // fade in logo when we're done
+function finish(time) {
     setTimeout(function () {
         $(".stream-ending").addClass("fade");
         $(".thanks-message").addClass("fade");
@@ -110,37 +118,48 @@ function finish(time) {
 
 // show a follower
 function showFollower(follower, i) {
-    var top, left;
-    var user = $("<div>").addClass("user").attr("id", "user-"+i);
-    var username = $("<h1>").addClass("username").html(follower.display_name);
-    var action = $("<h2>").addClass("action followed").html("FOLLOWED");
-    
-    user.append(username);
-    user.append(action);
-    
-    var width = getWidth(user);
-    
-    var loop = true;
-    while (loop) {
-        top = randomTop();
-        left = randomLeft(width);
-        user.css("top", top+"px").css("left", left+"px")
+    (function (follower, i) {
+        var top, left;
+        var user = $("<div>").addClass("user pop-in-out").attr("id", "user-"+i);
+        var username = $("<h1>").addClass("username").html(follower.display_name);
+        var action = $("<h2>").addClass("action followed").html("followed");
+        
+        //var times = $("<div>").addClass("times").html("x36");
+        //action.append(times);
+        
+        user.append(username);
+        user.append(action);
 
-        if (!hasCollision(width, top, left)) {
-            loop = false;
+        var width = getWidth(user);
+
+        var loop = true;
+        var attempt = 1;
+        while (loop) {
+            top = randomTop();
+            left = randomLeft(width);
+            user.css("top", top+"px").css("left", left+"px")
+
+            if (!hasCollision(width, top, left) || attempt >= 10) {
+                loop = false;
+                attempt = 1;
+            } else {
+                attempt++;
+            }
         }
-    }
-    
-    $("body").append(user);
-    
-    (function (i) {
+
+        // follower to dom
+        $("body").append(user);    
+
+        // set timer for fade out class  (fixes animation retart)
         setTimeout(function () {
-            $("#user-"+i).addClass("fade");
-        }, 1000);
+            $("#user-" + i).addClass("fade");
+        }, 2000);
+        
+        // set timer for removal from dom (for collision detection and cleanup)
         setTimeout(function () {
             $("#user-"+i).remove();
         }, 3500);
-    })(i);
+    })(follower, i);
 }
 
 // get width of a user element
@@ -189,9 +208,7 @@ function randomLeft(userWidth) {
 // check for collision with existing users
 function hasCollision(width, top, left) {
     // current users showing
-    var curShowing = $(".user");
-    
-    console.log(curShowing)
+    var curShowing = $(".user:not(.fade)");
     
     // new user bounding box
     var rect1 = {
@@ -211,8 +228,6 @@ function hasCollision(width, top, left) {
             bottom: position.top + $(curShowing[i]).height(),
             left: position.left
         };
-        
-        console.log(rect2);
         
         // check for overlap
         var overlap = !(rect1.right < rect2.left || 

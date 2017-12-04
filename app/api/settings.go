@@ -7,7 +7,8 @@ import (
 )
 
 type ApiSettings struct {
-    ClientTotalTime         int  `json:"clientTotalTime"`
+    ClientTimeTotal         int  `json:"clientTimeTotal"`
+    ClientTimePer           int  `json:"clientTimePer"`
     ClientShowFollowers     bool `json:"clientShowFollowers"`
     ClientShowSubscribers   bool `json:"clientShowSubscribers"`
     ClientShowCurrentStream bool `json:"clientShowCurrentStream"`
@@ -33,7 +34,8 @@ func (api *Api) handleSettingsGet(w http.ResponseWriter, r *http.Request) {
     
     // generate our api safe settings
     apiSettings := &ApiSettings{
-        ClientTotalTime:         api.config.ClientTotalTime,
+        ClientTimeTotal:         api.config.ClientTimeTotal,
+        ClientTimePer:           api.config.ClientTimePer,
         ClientShowFollowers:     api.config.ClientShowFollowers,
         ClientShowSubscribers:   api.config.ClientShowSubscribers,
         ClientShowCurrentStream: api.config.ClientShowCurrentStream,
