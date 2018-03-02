@@ -1,40 +1,41 @@
 package config
 
 import (
-    "encoding/json"
-    "fmt"
-    "os"
+	"encoding/json"
+	"fmt"
+	"os"
 )
 
-var (
-    CONFIG_FILE string = "./config.json"
+const (
+	configFilePath = "./config.json"
 )
 
+// Config stores the configuration file options.
 type Config struct {
-    MongoDBHost     string `json:"mongo_db_host"`
-    MongoDBPort     string `json:"mongo_db_port"`
-    MongoDBDatabase string `json:"mongo_db_database"`
-    
-    ApiHost string `json:"api_host"`
-    ApiPort string `json:"api_port"`
+	MongoDBHost     string `json:"mongo_db_host"`
+	MongoDBPort     string `json:"mongo_db_port"`
+	MongoDBDatabase string `json:"mongo_db_database"`
+
+	APIHost string `json:"api_host"`
+	APIPort string `json:"api_port"`
 }
 
-// create new config
+// NewConfig returns a new config.
 func NewConfig() *Config {
-    return &Config{}
+	return &Config{}
 }
 
-// load config file
+// Load loads the configuration file.
 func (c *Config) Load() error {
-    configFile, err := os.Open(CONFIG_FILE)
-    if err != nil {
-        return fmt.Errorf("config open: %s", err)
-    }
-    defer configFile.Close()
-    
-    if err := json.NewDecoder(configFile).Decode(c); err != nil {
-        return fmt.Errorf("config decode: %s", err)
-    }
-    
-    return nil
+	configFile, err := os.Open(configFilePath)
+	if err != nil {
+		return fmt.Errorf("config open: %s", err)
+	}
+	defer configFile.Close()
+
+	if err := json.NewDecoder(configFile).Decode(c); err != nil {
+		return fmt.Errorf("config decode: %s", err)
+	}
+
+	return nil
 }

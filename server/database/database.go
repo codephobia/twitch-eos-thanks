@@ -1,58 +1,72 @@
 package database
 
 import (
-    "fmt"
-    "strings"
-    
-    mgo "gopkg.in/mgo.v2"
-    
-    config "github.com/codephobia/twitch-eos-thanks/server/config"
+	"fmt"
+	"strings"
+
+	mgo "gopkg.in/mgo.v2"
+
+	config "github.com/codephobia/twitch-eos-thanks/server/config"
 )
 
-var (
-    COLLECTION_FOLLOWERS string = "followers"
+const (
+	collectionFollowers   = "followers"
+	collectionSubscribers = "subscribers"
 )
 
+// Database handles the MongoDB connection.
 type Database struct {
-    config *config.Config
-    
-    session   *mgo.Session
-    database  *mgo.Database
-    followers *mgo.Collection
+	config *config.Config
+
+	session     *mgo.Session
+	database    *mgo.Database
+	followers   *mgo.Collection
+	subscribers *mgo.Collection
 }
 
+// NewDatabase returns a new database.
 func NewDatabase(c *config.Config) *Database {
-    return &Database{
-        config: c,
-    }
+	return &Database{
+		config: c,
+	}
 }
 
+// Init initializes a new database.
 func (db *Database) Init() error {
-    // create mongo session
-    mongoDBUrl := strings.Join([]string{db.config.MongoDBHost, db.config.MongoDBPort}, ":")
-    session, err := mgo.Dial(mongoDBUrl)
-    if err != nil {
-        return fmt.Errorf("unable to dial server [%s]: %s", mongoDBUrl, err)
-    }
-    
-    // store session
-    db.session = session
-    db.session.SetMode(mgo.Monotonic, true)
-    
-    // init followers
-    db.initDatabase()
-    
-    return nil
+	// create mongo session
+	mongoDBUrl := strings.Join([]string{db.config.MongoDBHost, db.config.MongoDBPort}, ":")
+	session, err := mgo.Dial(mongoDBUrl)
+	if err != nil {
+		return fmt.Errorf("unable to dial server [%s]: %s", mongoDBUrl, err)
+	}
+
+	// store session
+	db.session = session
+	db.session.SetMode(mgo.Monotonic, true)
+
+	// init followers
+	db.initDatabase()
+
+	return nil
 }
 
 // init database
 func (db *Database) initDatabase() {
-    db.database = db.session.DB(db.config.MongoDBDatabase)
-    
-    db.initFollowers()
+	db.database = db.session.DB(db.config.MongoDBDatabase)
+
+	// followers
+	db.initFollowers()
+
+	// subscribers
+	db.initSubscribers()
 }
 
 // init followers collection
 func (db *Database) initFollowers() {
-    db.followers = db.database.C(COLLECTION_FOLLOWERS)
+	db.followers = db.database.C(collectionFollowers)
+}
+
+// init subscribers collection
+func (db *Database) initSubscribers() {
+	db.subscribers = db.database.C(collectionSubscribers)
 }

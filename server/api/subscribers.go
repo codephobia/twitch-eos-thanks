@@ -9,11 +9,11 @@ import (
 )
 
 // handleFollowers
-func (api *API) handleFollowers() http.Handler {
+func (api *API) handleSubscribers() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case "GET":
-			api.handleFollowersGet(w, r)
+			api.handleSubscribersGet(w, r)
 		default:
 			api.handleError(w, 400, fmt.Errorf("method not allowed"))
 		}
@@ -21,7 +21,7 @@ func (api *API) handleFollowers() http.Handler {
 }
 
 // handleFollowersGet
-func (api *API) handleFollowersGet(w http.ResponseWriter, r *http.Request) {
+func (api *API) handleSubscribersGet(w http.ResponseWriter, r *http.Request) {
 	var (
 		limitDefault = 20
 		limitMax     = 100
@@ -59,11 +59,11 @@ func (api *API) handleFollowersGet(w http.ResponseWriter, r *http.Request) {
 		offset = offsetMax
 	}
 
-	// get followers
-	followers, err := api.database.GetFollowers(channelID, latest, limit, offset)
+	// get subscribers
+	subscribers, err := api.database.GetSubscribers(channelID, latest, limit, offset)
 	if err != nil {
-		log.Printf("[ERROR] get followers: %s", err)
+		log.Printf("[ERROR] get subscribers: %s", err)
 	}
 
-	api.handleSuccess(w, followers)
+	api.handleSuccess(w, subscribers)
 }
