@@ -12,6 +12,10 @@ const (
 
 // Config stores the configuration file options.
 type Config struct {
+	TwitchClientID   string `json:"twitch_client_id"`
+	TwitchOAuthToken string `json:"twitch_oauth_token"`
+	TwitchChannelID  string `json:"twitch_channel_id"`
+
 	MongoDBHost     string `json:"mongo_db_host"`
 	MongoDBPort     string `json:"mongo_db_port"`
 	MongoDBDatabase string `json:"mongo_db_database"`

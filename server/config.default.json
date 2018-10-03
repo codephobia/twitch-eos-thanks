@@ -1,4 +1,7 @@
 {
+    "twitch_client_id": "",
+    "twitch_oauth_token": "",
+    "twitch_channel_id": "",
     "mongo_db_host": "localhost",
     "mongo_db_port": "27017",
     "mongo_db_database": "twitch_eos_thanks",

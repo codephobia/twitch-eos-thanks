@@ -6,6 +6,7 @@ import (
 	api "github.com/codephobia/twitch-eos-thanks/server/api"
 	config "github.com/codephobia/twitch-eos-thanks/server/config"
 	database "github.com/codephobia/twitch-eos-thanks/server/database"
+	"github.com/codephobia/twitch-eos-thanks/server/twitch"
 )
 
 type Main struct {
@@ -23,29 +24,35 @@ func main() {
 	}
 }
 
-func NewMain() (error, *Main) {
+func NewMain() (*Main, error) {
 	// load config
 	c := config.NewConfig()
 	if err := c.Load(); err != nil {
-		return err, nil
+		return nil, err
 	}
 
 	// init database
 	db := database.NewDatabase(c)
 	if err := db.Init(); err != nil {
-		return err, nil
+		return nil, err
+	}
+
+	// init twitch
+	t := twitch.NewTwitch(c, db)
+	if err := t.Init(); err != nil {
+		return nil, err
 	}
 
 	// api
 	api := api.NewAPI(c, db)
 	if err := api.Init(); err != nil {
-		return err, nil
+		return nil, err
 	}
 
 	// return main
-	return nil, &Main{
+	return &Main{
 		config:   c,
 		database: db,
 		api:      api,
-	}
+	}, nil
 }

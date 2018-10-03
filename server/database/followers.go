@@ -55,6 +55,22 @@ func (db *Database) hasFollower(channelID string, followerID string) (bool, erro
 	return false, nil
 }
 
+// HasFollowers checks for any followers for the channel in the database.
+func (db *Database) HasFollowers(channelID string) (bool, error) {
+	// build query
+	query := db.followers.Find(bson.M{
+		"channel_id": channelID,
+	})
+
+	// get count
+	count, err := query.Count()
+	if err != nil {
+		return false, err
+	}
+
+	return count > 0, nil
+}
+
 // RemoveFollower removes a follower from the database.
 func (db *Database) RemoveFollower(f *Follower) error {
 	// remove the follower from the database
