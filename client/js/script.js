@@ -51,33 +51,38 @@ function init() {
                 waterfallCb(err);
             });
         },
-        // shutdown
         function (settings, followers, waterfallCb) {
-            /*$.ajax({
-                url: host + "/shutdown"
+            // check if we are showing followers
+            if (!settings.clientShowFollowers) {
+                waterfallCb(null, settings, []);
+                return;
+            }
+            
+            // get followers
+            $.ajax({
+                url: host + "/subscribers"
             })
-            .done(function (data) {
-                waterfallCb(null, settings, followers);
+            .done(function (subscribers) {
+                waterfallCb(null, settings, followers, subscribers);
             })
             .fail(function (err) {
                 waterfallCb(err);
-            });*/
-            waterfallCb(null, settings, followers);
-        }
-    ], function (err, settings, followers) {
+            });
+        },
+    ], function (err, settings, followers, subscribers) {
         if (err) {
             console.error(err);
             finish(0);
         } else {
-            start(settings, followers);
+            start(settings, followers, subscribers);
         }
     });
 }
 
 // start showing followers
-function start(settings, followers) {
-    // number of followers
-    var count = followers.length;
+function start(settings, followers, subscribers) {
+    // number of users
+    var count = followers.length + subscribers.length;
     
     // time length of outro in milliseconds
     var time = (count) ? settings.clientTimeTotal : 0;
@@ -90,21 +95,39 @@ function start(settings, followers) {
     
     // interval between each follower
     var interval = time / count;
+    var userCount = 0;
 
     // loop through followers
     for (var i = 0; i < followers.length; i++) {
         // time to show this follower
-        var t = Math.floor(interval * i);
+        var t = Math.floor(interval * userCount);
         
         // set timeout for showing follower
-        (function (i, t) {
+        (function (i, t, userCount) {
             setTimeout(function () {
-                showFollower(followers[i], i);
+                showUser(followers[i], userCount, 'followed');
             }, t);
-        })(i, t);
+        })(i, t, userCount);
+
+        userCount++;
+    }
+
+    // loop through subscribers
+    for (var i = 0; i < subscribers.length; i++) {
+        // time to show this follower
+        var t = Math.floor(interval * userCount);
+        
+        // set timeout for showing follower
+        (function (i, t, userCount) {
+            setTimeout(function () {
+                showUser(subscribers[i], userCount, 'subscribed');
+            }, t + 1000);
+        })(i, t, userCount);
+
+        userCount++;
     }
     
-    finish(time);
+    finish(time + 3000);
 }
 
 // fade in logo when we're done
@@ -116,28 +139,36 @@ function finish(time) {
     }, time);    
 }
 
-// show a follower
-function showFollower(follower, i) {
-    (function (follower, i) {
-        var top, left;
-        var user = $("<div>").addClass("user pop-in-out").attr("id", "user-"+i);
-        var username = $("<h1>").addClass("username").html(follower.display_name);
-        var action = $("<h2>").addClass("action followed").html("followed");
+// show a user
+function showUser(user, userCount, actionType) {
+    (function (user, userCount) {
+        var top, left, actionEl;
+        var userEl = $("<div>").addClass("user pop-in-out").attr("id", "user-"+userCount);
+        var usernameEl = $("<h1>").addClass("username").html(user.display_name);
         
-        //var times = $("<div>").addClass("times").html("x36");
-        //action.append(times);
+        if (actionType === 'followed') {
+            actionEl = $("<h2>").addClass("action followed").html("followed");
+        } else if (actionType === 'subscribed') {
+            actionEl = $("<h2>").addClass("action subscribed").html("subscribed");
+            
+            // handle resub count
+            if (user.months > 1) {
+                var timesEl = $("<div>").addClass("times").html("x" + user.months);
+                actionEl.append(timesEl);
+            }
+        }
         
-        user.append(username);
-        user.append(action);
+        userEl.append(usernameEl);
+        userEl.append(actionEl);
 
-        var width = getWidth(user);
+        var width = getWidth(userEl);
 
         var loop = true;
         var attempt = 1;
         while (loop) {
             top = randomTop();
             left = randomLeft(width);
-            user.css("top", top+"px").css("left", left+"px")
+            userEl.css("top", top+"px").css("left", left+"px")
 
             if (!hasCollision(width, top, left) || attempt >= 10) {
                 loop = false;
@@ -147,19 +178,19 @@ function showFollower(follower, i) {
             }
         }
 
-        // follower to dom
-        $("body").append(user);    
+        // user to dom
+        $("body").append(userEl);    
 
         // set timer for fade out class  (fixes animation retart)
         setTimeout(function () {
-            $("#user-" + i).addClass("fade");
+            $("#user-" + userCount).addClass("fade");
         }, 2000);
         
         // set timer for removal from dom (for collision detection and cleanup)
         setTimeout(function () {
-            $("#user-"+i).remove();
+            $("#user-"+userCount).remove();
         }, 3500);
-    })(follower, i);
+    })(user, userCount);
 }
 
 // get width of a user element

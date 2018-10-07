@@ -23,15 +23,16 @@ func (api *API) handleSubscribers() http.Handler {
 // handleFollowersGet
 func (api *API) handleSubscribersGet(w http.ResponseWriter, r *http.Request) {
 	var (
-		limitDefault = 20
-		limitMax     = 100
-		offsetMax    = 100
+		limitDefault  = 20
+		limitMax      = 100
+		offsetDefault = 0
 	)
 
 	// get query vars
 	v := r.URL.Query()
 
 	// get vars
+	// TODO: error check this
 	channelID := v.Get("channelID")
 	limit, _ := strconv.Atoi(v.Get("limit"))
 	offset, _ := strconv.Atoi(v.Get("offset"))
@@ -55,8 +56,8 @@ func (api *API) handleSubscribersGet(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// check offset
-	if offset > offsetMax {
-		offset = offsetMax
+	if offset <= offsetDefault {
+		offset = offsetDefault
 	}
 
 	// get subscribers

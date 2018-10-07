@@ -44,6 +44,7 @@ func (db *Database) AddSubscriber(s *Subscriber) error {
 		return err
 	}
 
+	// TODO: figure out how we're going to handle duplicate subs
 	// skip adding subscriber to database if they are already subscribed
 	if subscribed {
 		return fmt.Errorf("found duplicate subscriber [%s] for channel [%s]", s.SubscriberID, s.ChannelID)
@@ -99,9 +100,7 @@ func (db *Database) GetSubscribers(channelID string, latest int64, limit int, of
 
 	// add filters
 	query.Limit(limit).Skip(offset).Sort("-timestamp").Select(bson.M{
-		"_id":           0,
-		"subscriber_id": 1,
-		"timestamp":     1,
+		"_id": 0,
 	})
 
 	// get subscribers

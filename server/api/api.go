@@ -66,9 +66,6 @@ func (api *API) Handler() http.Handler {
 	// get followers
 	r.Handle("/followers", api.handleFollowers())
 
-	// subscribe webhook
-	r.Handle("/subscribe", api.handleSubscribe())
-
 	// get subscribers
 	r.Handle("/subscribers", api.handleSubscribers())
 

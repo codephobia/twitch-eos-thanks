@@ -11,15 +11,17 @@ import (
 )
 
 var (
-	TWITCH_API_DELAY          time.Duration = 500 * time.Millisecond
-	TWITCH_API_CRON_DURATION  time.Duration = 5 * time.Minute
-	TWITCH_API_FOLLOWER_LIMIT int           = 100
-	TWITCH_API_USER_LIMIT     int           = 100
+	TWITCH_API_DELAY            time.Duration = 500 * time.Millisecond
+	TWITCH_API_CRON_DURATION    time.Duration = 5 * time.Minute
+	TWITCH_API_FOLLOWER_LIMIT   int           = 100
+	TWITCH_API_SUBSCRIBER_LIMIT int           = 100
+	TWITCH_API_USER_LIMIT       int           = 100
 
 	TWITCH_HELIX_USERS_URL string = "/users?"
 
-	TWITCH_DB_BUCKET          []string = []string{"twitch"}
-	TWITCH_FOLLOWER_DB_BUCKET []string = append(TWITCH_DB_BUCKET, "followers")
+	TWITCH_DB_BUCKET            []string = []string{"twitch"}
+	TWITCH_FOLLOWER_DB_BUCKET   []string = append(TWITCH_DB_BUCKET, "followers")
+	TWITCH_SUBSCRIBER_DB_BUCKET []string = append(TWITCH_DB_BUCKET, "subscribers")
 )
 
 // twitch
@@ -29,14 +31,20 @@ type Twitch struct {
 	timer    *util.Timer
 
 	Followers       []*Follower
+	Subscribers     []*database.Subscriber
 	StreamStartTime time.Time
 }
 
 // create twitch
 func NewTwitch(c *config.Config, db *database.Database) (*Twitch, error) {
-	// init the bucket
+	// init the followers bucket
 	if err := db.InitBucket(TWITCH_FOLLOWER_DB_BUCKET); err != nil {
-		return nil, fmt.Errorf("init twitch bucket: ", err)
+		return nil, fmt.Errorf("init twitch followers bucket: ", err)
+	}
+
+	// init the subscribers bucket
+	if err := db.InitBucket(TWITCH_SUBSCRIBER_DB_BUCKET); err != nil {
+		return nil, fmt.Errorf("init twitch subscribers bucket: ", err)
 	}
 
 	// return new twitch struct
@@ -67,6 +75,16 @@ func (t *Twitch) Get() error {
 
 	// save the followers to the database
 	if err := t.saveFollowers(); err != nil {
+		return err
+	}
+
+	// get subscribers
+	if err := t.getSubscribers(); err != nil {
+		return err
+	}
+
+	// save the followers to the database
+	if err := t.saveSubscribers(); err != nil {
 		return err
 	}
 

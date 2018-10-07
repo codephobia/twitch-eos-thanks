@@ -1,21 +1,28 @@
 package twitch
 
+import database "github.com/codephobia/twitch-eos-thanks/app/database"
+
 // follower list response
 type FollowersResp struct {
-    Data []struct {
-        FollowerID string `json:"followerID"`
-        Timestamp  string `json:"timestamp"`        
-    } `json:"data"`
+	Data []struct {
+		FollowerID string `json:"followerID"`
+		Timestamp  string `json:"timestamp"`
+	} `json:"data"`
+}
+
+// subscriber list response
+type SubscribersResp struct {
+	Data []*database.Subscriber `json:"data"`
 }
 
 // twitch user response
 type UserResp struct {
-    Data []*TwitchUser `json:"data"`
+	Data []*TwitchUser `json:"data"`
 }
 
 // twitch streams response
 type StreamsResp struct {
-    Stream struct {
-        CreatedAt string `json:"created_at"`
-    } `json:"stream"`
+	Stream struct {
+		CreatedAt string `json:"created_at"`
+	} `json:"stream"`
 }
