@@ -151,6 +151,11 @@ function showUser(user, userCount, actionType) {
         } else if (actionType === 'subscribed') {
             actionEl = $("<h2>").addClass("action subscribed").html("subscribed");
             
+            // handle prime
+            if (user.sub_plan === 'Prime') {
+                actionEl.addClass('prime');
+            }
+            
             // handle resub count
             if (user.months > 1) {
                 var timesEl = $("<div>").addClass("times").html("x" + user.months);
