@@ -16,18 +16,24 @@ var (
 	TWITCH_HELIX_FOLLOWERS_URL string = "/users/follows?to_id="
 )
 
-// twitch
+// Twitch ...
 type Twitch struct {
 	config   *config.Config
 	database *database.Database
+
+	pubsub *PUBSUB
 }
 
-// create twitch
+// NewTwitch returns a new twitch.
 func NewTwitch(c *config.Config, db *database.Database) *Twitch {
-	return &Twitch{
+	twitch := &Twitch{
 		config:   c,
 		database: db,
 	}
+
+	twitch.pubsub = NewPUBSUB(c, db, twitch)
+
+	return twitch
 }
 
 // Init initializes the twitch channels, getting followers if need be
@@ -38,11 +44,14 @@ func (t *Twitch) Init() error {
 		return err
 	}
 
-	// if we already have followers, skip getting followers
-	if hasFollowers {
-		return nil
+	// if we don't have followers, get followers
+	if !hasFollowers {
+		// get followers from twitch
+		if err := t.getFollowers(); err != nil {
+			return err
+		}
 	}
 
-	// get followers from twitch
-	return t.getFollowers()
+	// init pubsub
+	return t.pubsub.Init()
 }

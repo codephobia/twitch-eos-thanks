@@ -7,12 +7,33 @@ import (
 	"gopkg.in/mgo.v2/bson"
 )
 
-// Subscriber is a twitch follower.
+// Subscriber is a twitch subscriber.
 type Subscriber struct {
 	ID           bson.ObjectId `bson:"_id,omitempty" json:"ID,omitempty"`
 	ChannelID    string        `bson:"channel_id,omitempty" json:"channelID,omitempty"`
 	SubscriberID string        `bson:"subscriber_id,omitempty" json:"subscriberID,omitempty"`
 	Timestamp    time.Time     `bson:"timestamp,omitempty" json:"timestamp,omitempty"`
+
+	DisplayName string      `bson:"display_name" json:"display_name"`
+	SubPlan     string      `bson:"sub_plan" json:"sub_plan"`
+	SubPlanName string      `bson:"sub_plan_name" json:"sub_plan_name"`
+	Months      int         `bson:"months" json:"months"`
+	Context     string      `bson:"context" json:"context"`
+	SubMessage  *SubMessage `bson:"sub_message" json:"sub_message"`
+}
+
+// SubMessage is the message sent when a user subscribes.
+type SubMessage struct {
+	Message string             `bson:"message" json:"message"`
+	Emotes  []*SubMessageEmote `bson:"emotes" json:"emotes"`
+}
+
+// SubMessageEmote is meta data for a twitch emote contained
+// within a message string.
+type SubMessageEmote struct {
+	Start int `bson:"start" json:"start"`
+	End   int `bson:"end" json:"end"`
+	ID    int `bson:"id" json:"id"`
 }
 
 // AddSubscriber adds a subscriber to the database.
@@ -46,13 +67,8 @@ func (db *Database) hasSubscriber(channelID string, subscriberID string) (bool, 
 		return false, err
 	}
 
-	// return that we found a subscriber
-	if count > 0 {
-		return true, nil
-	}
-
-	// return that we didn't find a subscriber
-	return false, nil
+	// return if we found a subscriber
+	return count > 0, nil
 }
 
 // RemoveSubscriber removes a subscriber from the database.

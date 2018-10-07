@@ -130,7 +130,7 @@ body {
     display: block;
     width: 28px;
     height: 28px;
-    content:"";
+    content: "";
 }
 
 .action.cheered.bit1::before {

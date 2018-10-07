@@ -1,7 +1,10 @@
 {
     "twitch_client_id": "",
+    "twitch_client_secret": "",
     "twitch_oauth_token": "",
     "twitch_channel_id": "",
+    "twitch_channel_oauth_token": "",
+    "twitch_channel_refresh_token": "",
     "mongo_db_host": "localhost",
     "mongo_db_port": "27017",
     "mongo_db_database": "twitch_eos_thanks",

@@ -1,8 +1,10 @@
 package config
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"os"
 )
 
@@ -12,9 +14,12 @@ const (
 
 // Config stores the configuration file options.
 type Config struct {
-	TwitchClientID   string `json:"twitch_client_id"`
-	TwitchOAuthToken string `json:"twitch_oauth_token"`
-	TwitchChannelID  string `json:"twitch_channel_id"`
+	TwitchClientID            string `json:"twitch_client_id"`
+	TwitchClientSecret        string `json:"twitch_client_secret"`
+	TwitchOAuthToken          string `json:"twitch_oauth_token"`
+	TwitchChannelID           string `json:"twitch_channel_id"`
+	TwitchChannelOAuthToken   string `json:"twitch_channel_oauth_token"`
+	TwitchChannelRefreshToken string `json:"twitch_channel_refresh_token"`
 
 	MongoDBHost     string `json:"mongo_db_host"`
 	MongoDBPort     string `json:"mongo_db_port"`
@@ -42,4 +47,23 @@ func (c *Config) Load() error {
 	}
 
 	return nil
+}
+
+// Save saves the current in memory config values to
+// the configuration json file.
+func (c *Config) Save() error {
+	// marshal config
+	configJSON, err := json.Marshal(c)
+	if err != nil {
+		return err
+	}
+
+	// make json pretty
+	var prettyJSON bytes.Buffer
+	if err := json.Indent(&prettyJSON, configJSON, "", "    "); err != nil {
+		return err
+	}
+
+	// write updates to file
+	return ioutil.WriteFile(configFilePath, prettyJSON.Bytes(), 0644)
 }
