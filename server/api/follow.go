@@ -12,14 +12,11 @@ import (
 
 // Follow is a twitch follow.
 type Follow struct {
-	ID    string `json:"id"`
-	Topic string `json:"topic"`
-	Type  string `json:"type"`
-	Data  struct {
-		FromID string `json:"from_id"`
-		ToID   string `json:"to_id"`
+	Data []struct {
+		ToID      string `json:"to_id"`
+		FromID    string `json:"from_id"`
+		Timestamp string `json:"followed_at"`
 	} `json:"data"`
-	Timestamp string `json:"timestamp"`
 }
 
 // handleFollow
@@ -41,6 +38,7 @@ func (api *API) handleFollowGet(w http.ResponseWriter, r *http.Request) {
 	// get query vars
 	v := r.URL.Query()
 
+	// TODO: add secret validation
 	// get vars
 	hubMode := v.Get("hub.mode")
 	//hubTopic := v.Get("hub.topic")
@@ -58,6 +56,9 @@ func (api *API) handleFollowGet(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		log.Printf("[ERROR] invalid request mode: %s", hubMode)
 	}
+
+	// close body
+	r.Body.Close()
 }
 
 // handleFollowPost
@@ -71,37 +72,31 @@ func (api *API) handleFollowPost(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&f)
 	if err != nil {
-		log.Printf("[ERROR] unable to decode notification: %s", err)
+		log.Printf("[ERROR] follow: unable to decode notification: %s", err)
 		return
 	}
 
-	// convert time from string
-	t, err := time.Parse(time.RFC3339, f.Timestamp)
-	if err != nil {
-		log.Printf("[ERROR] unable to decode notification: %s", err)
-		return
-	}
+	// loop through all follows on payload
+	for _, newFollow := range f.Data {
+		// convert time from string
+		t, err := time.Parse(time.RFC3339, newFollow.Timestamp)
+		if err != nil {
+			log.Printf("[ERROR] follow: unable to parse timetamp: %s", err)
+			return
+		}
 
-	// build follower for db
-	follower := &database.Follower{
-		ChannelID:  f.Data.ToID,
-		FollowerID: f.Data.FromID,
-		Timestamp:  t,
-	}
+		// build follower for db
+		follower := &database.Follower{
+			ChannelID:  newFollow.ToID,
+			FollowerID: newFollow.FromID,
+			Timestamp:  t,
+		}
 
-	// determine if we should add or remove the follower
-	switch f.Type {
-	case "create":
-		// add the follower to database
 		if err := api.database.AddFollower(follower); err != nil {
 			log.Printf("[ERROR] unable to add follower: %s", err)
 		}
-	case "delete":
-		// remove the follower from database
-		if err := api.database.RemoveFollower(follower); err != nil {
-			log.Printf("[ERROR] unable to remove follower: %s", err)
-		}
-	default:
-		log.Printf("[ERROR] unknown follow type: %s", f.Type)
 	}
+
+	// close body
+	r.Body.Close()
 }
