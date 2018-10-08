@@ -1,6 +1,8 @@
 package twitch
 
-import "encoding/json"
+import (
+	"encoding/json"
+)
 
 // PUBSUBMessage is a message when a pub sub event is received.
 type PUBSUBMessage struct {
@@ -82,7 +84,10 @@ type PUBSUBEmote struct {
 // PUBSUBBitsMessage is a message for a bits
 // event on a pub sub message.
 type PUBSUBBitsMessage struct {
-	Data *PUBSUBBitsMessageData `json:"data"`
+	Data        *PUBSUBBitsMessageData `json:"data"`
+	Version     string                 `json:"version"`
+	MessageType string                 `json:"message_type"`
+	MessageID   string                 `json:"message_id"`
 }
 
 // PUBSUBBitsMessageData is the data for a PUBSUBBitsMessage.
@@ -97,9 +102,6 @@ type PUBSUBBitsMessageData struct {
 	TotalBitsUsed    int                                `json:"total_bits_used"`
 	Context          string                             `json:"context"`
 	BadgeEntitlement *PUBSUBBitsMessageBadgeEntitlement `json:"badge_entitlement"`
-	Version          string                             `json:"version"`
-	MessageType      string                             `json:"message_type"`
-	MessageID        string                             `json:"message_id"`
 }
 
 // PUBSUBBitsMessageBadgeEntitlement contains badge entitlement

@@ -8,20 +8,20 @@ import (
 	"strconv"
 )
 
-// handleSubscribers
-func (api *API) handleSubscribers() http.Handler {
+// handleBits
+func (api *API) handleBits() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case "GET":
-			api.handleSubscribersGet(w, r)
+			api.handleBitsGet(w, r)
 		default:
 			api.handleError(w, 400, fmt.Errorf("method not allowed"))
 		}
 	})
 }
 
-// handleSubscribersGet
-func (api *API) handleSubscribersGet(w http.ResponseWriter, r *http.Request) {
+// handleBitsGet
+func (api *API) handleBitsGet(w http.ResponseWriter, r *http.Request) {
 	var (
 		limitDefault  = 20
 		limitMax      = 100
@@ -60,11 +60,11 @@ func (api *API) handleSubscribersGet(w http.ResponseWriter, r *http.Request) {
 		offset = offsetDefault
 	}
 
-	// get subscribers
-	subscribers, err := api.database.GetSubscribers(channelID, latest, limit, offset)
+	// get bits
+	bits, err := api.database.GetBits(channelID, latest, limit, offset)
 	if err != nil {
-		log.Printf("[ERROR] get subscribers: %s", err)
+		log.Printf("[ERROR] get bits: %s", err)
 	}
 
-	api.handleSuccess(w, subscribers)
+	api.handleSuccess(w, bits)
 }

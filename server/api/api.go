@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"net"
@@ -69,40 +68,9 @@ func (api *API) Handler() http.Handler {
 	// get subscribers
 	r.Handle("/subscribers", api.handleSubscribers())
 
+	// get bits
+	r.Handle("/bits", api.handleBits())
+
 	// return router
 	return r
-}
-
-// DataResp is an api response.
-type DataResp struct {
-	Data interface{} `json:"data"`
-}
-
-// handle a success response
-func (api *API) handleSuccess(w http.ResponseWriter, data interface{}) {
-	// add headers to response
-	w.Header().Add("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-
-	// return followers
-	enc := json.NewEncoder(w)
-	enc.Encode(&DataResp{
-		Data: data,
-	})
-}
-
-// ErrorResp is an error response.
-type ErrorResp struct {
-	Err string `json:"error"`
-}
-
-// handle an error response
-func (api *API) handleError(w http.ResponseWriter, status int, err error) {
-	w.Header().Add("Content-Type", "application/json")
-	w.WriteHeader(status)
-
-	enc := json.NewEncoder(w)
-	enc.Encode(&ErrorResp{
-		Err: err.Error(),
-	})
 }

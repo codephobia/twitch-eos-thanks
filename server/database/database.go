@@ -12,6 +12,7 @@ import (
 const (
 	collectionFollowers   = "followers"
 	collectionSubscribers = "subscribers"
+	collectionBits        = "bits"
 )
 
 // Database handles the MongoDB connection.
@@ -22,6 +23,7 @@ type Database struct {
 	database    *mgo.Database
 	followers   *mgo.Collection
 	subscribers *mgo.Collection
+	bits        *mgo.Collection
 }
 
 // NewDatabase returns a new database.
@@ -59,6 +61,9 @@ func (db *Database) initDatabase() {
 
 	// subscribers
 	db.initSubscribers()
+
+	// bits
+	db.initBits()
 }
 
 // init followers collection
@@ -69,4 +74,9 @@ func (db *Database) initFollowers() {
 // init subscribers collection
 func (db *Database) initSubscribers() {
 	db.subscribers = db.database.C(collectionSubscribers)
+}
+
+// init bits collection
+func (db *Database) initBits() {
+	db.bits = db.database.C(collectionBits)
 }

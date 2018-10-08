@@ -119,6 +119,8 @@ func (p *PUBSUB) listenRequest() error {
 	// create subs listen request
 	subsTopics := []string{
 		strings.Join([]string{PUBSUBTopicSubscription.String(), p.config.TwitchChannelID}, "."),
+		strings.Join([]string{PUBSUBTopicBits.String(), p.config.TwitchChannelID}, "."),
+		strings.Join([]string{PUBSUBTopicCommerce.String(), p.config.TwitchChannelID}, "."),
 	}
 	subsReq := NewPUBSUBRequest(PUBSUBTypeListen.String(), subsTopics, p.config.TwitchChannelOAuthToken)
 
@@ -301,7 +303,8 @@ func (p *PUBSUB) handleMessage(msg *PUBSUBMessage) {
 		// convert timestamp
 		timestamp, err := time.Parse(time.RFC3339, subscription.Time)
 		if err != nil {
-			log.Printf("unable to convert sub timestamp: %s", err)
+			log.Printf("[ERROR] unable to convert sub timestamp: %s", err)
+			timestamp = time.Now()
 		}
 
 		// add the subscriber to the database
@@ -325,7 +328,43 @@ func (p *PUBSUB) handleMessage(msg *PUBSUBMessage) {
 
 		return
 	case PUBSUBTopicBits:
-		log.Printf("bits: %s", msg.Data.Message)
+		// convert message string to bits message
+		bits, err := NewPUBSUBBitsMessage(msg.Data.Message)
+		if err != nil {
+			log.Printf("[ERROR] bits message: %s", err)
+			return
+		}
+
+		// convert timestamp
+		timestamp, err := time.Parse(time.RFC3339, bits.Data.Time)
+		if err != nil {
+			log.Printf("[ERROR] unable to convert bit timestamp: %s", err)
+			timestamp = time.Now()
+		}
+
+		// create badge entitlement
+		badgeEntitlement := &database.BadgeEntitlement{}
+		if bits.Data.BadgeEntitlement != nil {
+			badgeEntitlement.NewVersion = bits.Data.BadgeEntitlement.NewVersion
+			badgeEntitlement.PreviousVersion = bits.Data.BadgeEntitlement.PreviousVersion
+		}
+
+		// add the bit event to the database
+		if err := p.database.AddBit(&database.Bit{
+			UserName:         bits.Data.UserName,
+			ChannelName:      bits.Data.ChannelName,
+			UserID:           bits.Data.UserID,
+			ChannelID:        bits.Data.ChannelID,
+			Time:             timestamp,
+			ChatMessage:      bits.Data.ChatMessage,
+			BitsUsed:         bits.Data.BitsUsed,
+			TotalBitsUsed:    bits.Data.TotalBitsUsed,
+			Context:          bits.Data.Context,
+			BadgeEntitlement: badgeEntitlement,
+		}); err != nil {
+			log.Printf("[ERROR] add bits: %s", err)
+		}
+
 		return
 	case PUBSUBTopicCommerce:
 		log.Printf("commerce: %s", msg.Data.Message)
