@@ -67,8 +67,11 @@ func (api *Api) Handler() http.Handler {
 	// followers
 	r.Handle("/followers", api.handleFollowers())
 
-	// followers
+	// subscribers
 	r.Handle("/subscribers", api.handleSubscribers())
+
+	// bits
+	r.Handle("/bits", api.handleBits())
 
 	// shutdown
 	r.Handle("/shutdown", api.handleShutdown())

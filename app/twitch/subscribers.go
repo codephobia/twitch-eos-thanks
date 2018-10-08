@@ -12,17 +12,6 @@ import (
 	database "github.com/codephobia/twitch-eos-thanks/app/database"
 )
 
-// find a twitch subscriber by id
-func (t *Twitch) findSubscriberById(id string) (*database.Subscriber, error) {
-	for _, v := range t.Subscribers {
-		if v.SubscriberID == id {
-			return v, nil
-		}
-	}
-
-	return nil, fmt.Errorf("unable to find subscriber: %s", id)
-}
-
 func (t *Twitch) getSubscribers() error {
 	log.Printf("[INFO] getSubscribers: checking api for subscribers")
 
@@ -71,7 +60,7 @@ func (t *Twitch) getSubscribers() error {
 		}
 
 		// update subscribers
-		t.Subscribers = subscriberResp.Data
+		t.Subscribers = append(t.Subscribers, subscriberResp.Data...)
 
 		// check if we need to keep looping
 		cnt := len(subscriberResp.Data)
@@ -98,7 +87,7 @@ func (t *Twitch) getLatestSubscriberTime() (time.Time, error) {
 	// get subscriber count
 	count, err := t.database.Count(TWITCH_SUBSCRIBER_DB_BUCKET)
 	if err != nil {
-		return lt, fmt.Errorf("count: ", err)
+		return lt, fmt.Errorf("count: %s", err)
 	}
 
 	// if we have cached subscribers, get latest subscribe time
@@ -106,7 +95,7 @@ func (t *Twitch) getLatestSubscriberTime() (time.Time, error) {
 		// get all subscribers from database
 		err, dbSubscribers := t.database.GetAll(TWITCH_SUBSCRIBER_DB_BUCKET)
 		if err != nil {
-			return lt, fmt.Errorf("get subscribers: ", err)
+			return lt, fmt.Errorf("get subscribers: %s", err)
 		}
 
 		// loop through subscribers
@@ -114,7 +103,7 @@ func (t *Twitch) getLatestSubscriberTime() (time.Time, error) {
 			// unmarshal subscriber
 			var subscriber database.Subscriber
 			if err := json.Unmarshal(dbSubscriber, &subscriber); err != nil {
-				return lt, fmt.Errorf("unmarshal subscriber: ", err)
+				return lt, fmt.Errorf("unmarshal subscriber: %s", err)
 			}
 
 			// check if subscriber date is more recent
@@ -136,8 +125,8 @@ func (t *Twitch) saveSubscribers() error {
 
 	for _, subscriber := range t.Subscribers {
 		// put the subscriber data
-		if err := t.database.Put(TWITCH_SUBSCRIBER_DB_BUCKET, subscriber.SubscriberID, *subscriber); err != nil {
-			return fmt.Errorf("saving subscriber [%s]: %+v", err)
+		if err := t.database.Put(TWITCH_SUBSCRIBER_DB_BUCKET, subscriber.ID.Hex(), *subscriber); err != nil {
+			return fmt.Errorf("saving subscriber [%s]: %s", subscriber.SubscriberID, err)
 		}
 	}
 

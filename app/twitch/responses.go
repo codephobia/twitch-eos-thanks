@@ -15,6 +15,11 @@ type SubscribersResp struct {
 	Data []*database.Subscriber `json:"data"`
 }
 
+// bit list response
+type BitsResp struct {
+	Data []*database.Bit `json:"data"`
+}
+
 // twitch user response
 type UserResp struct {
 	Data []*TwitchUser `json:"data"`

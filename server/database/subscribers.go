@@ -99,9 +99,7 @@ func (db *Database) GetSubscribers(channelID string, latest int64, limit int, of
 	})
 
 	// add filters
-	query.Limit(limit).Skip(offset).Sort("-timestamp").Select(bson.M{
-		"_id": 0,
-	})
+	query.Limit(limit).Skip(offset).Sort("-timestamp")
 
 	// get subscribers
 	err := query.All(&subscribers)

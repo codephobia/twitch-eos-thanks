@@ -52,37 +52,55 @@ function init() {
             });
         },
         function (settings, followers, waterfallCb) {
-            // check if we are showing followers
-            if (!settings.clientShowFollowers) {
-                waterfallCb(null, settings, []);
-                return;
-            }
+            // check if we are showing bits
+            // if (!settings.clientShowFollowers) {
+            //     waterfallCb(null, settings, []);
+            //     return;
+            // }
             
-            // get followers
+            // get bits
             $.ajax({
-                url: host + "/subscribers"
+                url: host + "/bits"
             })
-            .done(function (subscribers) {
-                waterfallCb(null, settings, followers, subscribers);
+            .done(function (bits) {
+                waterfallCb(null, settings, followers, bits);
             })
             .fail(function (err) {
                 waterfallCb(err);
             });
         },
-    ], function (err, settings, followers, subscribers) {
+        function (settings, followers, bits, waterfallCb) {
+            // check if we are showing followers
+            // if (!settings.clientShowFollowers) {
+            //     waterfallCb(null, settings, []);
+            //     return;
+            // }
+            
+            // get subscribers
+            $.ajax({
+                url: host + "/subscribers"
+            })
+            .done(function (subscribers) {
+                waterfallCb(null, settings, followers, bits, subscribers);
+            })
+            .fail(function (err) {
+                waterfallCb(err);
+            });
+        },
+    ], function (err, settings, followers, bits, subscribers) {
         if (err) {
             console.error(err);
             finish(0);
         } else {
-            start(settings, followers, subscribers);
+            start(settings, followers, bits, subscribers);
         }
     });
 }
 
 // start showing followers
-function start(settings, followers, subscribers) {
+function start(settings, followers, bits, subscribers) {
     // number of users
-    var count = followers.length + subscribers.length;
+    var count = followers.length + bits.length + subscribers.length;
     
     // time length of outro in milliseconds
     var time = (count) ? settings.clientTimeTotal : 0;
@@ -112,12 +130,27 @@ function start(settings, followers, subscribers) {
         userCount++;
     }
 
-    // loop through subscribers
-    for (var i = 0; i < subscribers.length; i++) {
-        // time to show this follower
+    // loop through bits
+    for (var i = 0; i < bits.length; i++) {
+        // time to show this
         var t = Math.floor(interval * userCount);
         
-        // set timeout for showing follower
+        // set timeout for showing
+        (function (i, t, userCount) {
+            setTimeout(function () {
+                showUser(bits[i], userCount, 'cheered');
+            }, t + 1000);
+        })(i, t, userCount);
+
+        userCount++;
+    }
+
+    // loop through subscribers
+    for (var i = 0; i < subscribers.length; i++) {
+        // time to show this
+        var t = Math.floor(interval * userCount);
+        
+        // set timeout for showing
         (function (i, t, userCount) {
             setTimeout(function () {
                 showUser(subscribers[i], userCount, 'subscribed');
@@ -148,6 +181,21 @@ function showUser(user, userCount, actionType) {
         
         if (actionType === 'followed') {
             actionEl = $("<h2>").addClass("action followed").html("followed");
+        } else if (actionType === 'cheered') {
+            actionEl = $("<h2>").addClass("action cheered").html("cheered");
+
+            // handle cheer icon
+            if (user.bits >= 100000) {
+                actionEl.addClass('bit100000');
+            } else if (user.bits >= 10000) {
+                actionEl.addClass('bit10000');
+            } else if (user.bits >= 1000) {
+                actionEl.addClass('bit1000');
+            } else if (user.bits >= 100) {
+                actionEl.addClass('bit100');
+            } else {
+                actionEl.addClass('bit1');
+            }
         } else if (actionType === 'subscribed') {
             actionEl = $("<h2>").addClass("action subscribed").html("subscribed");
             

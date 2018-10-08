@@ -23,52 +23,53 @@ func (api *Api) handleSubscribers() http.Handler {
 
 // handleSubscribersGet
 func (api *Api) handleSubscribersGet(w http.ResponseWriter, r *http.Request) {
-	// Subscribers to return
-	Subscribers := make([]database.Subscriber, 0)
+	// subscribers to return
+	subscribers := make([]database.Subscriber, 0)
 
 	// add headers to response
 	w.Header().Add("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 
-	// db Subscribers
+	// db subscribers
 	dbSubscribers := make([][]byte, 0)
 
-	// if limiting Subscribers to current stream
+	// if limiting subscribers to current stream
 	if api.config.ClientShowCurrentStream {
-		// get current stream Subscribers from db
+		// get current stream subscribers from db
+		// TODO: fix followed_at
 		err, f := api.database.GetAllSince(twitch.TWITCH_SUBSCRIBER_DB_BUCKET, api.twitch.StreamStartTime, "followed_at")
 		if err != nil {
 			api.handleError(w, 500, err)
 			return
 		}
 
-		// set Subscribers
+		// set subscribers
 		dbSubscribers = f
 	} else {
-		// load all Subscribers from db
+		// load all subscribers from db
 		err, f := api.database.GetAll(twitch.TWITCH_SUBSCRIBER_DB_BUCKET)
 		if err != nil {
 			api.handleError(w, 500, err)
 			return
 		}
 
-		// set Subscribers
+		// set subscribers
 		dbSubscribers = f
 	}
 
-	// unmarshal db Subscribers
+	// unmarshal db subscribers
 	for _, dbSubscriber := range dbSubscribers {
-		var follower database.Subscriber
-		if err := json.Unmarshal(dbSubscriber, &follower); err != nil {
+		var subscriber database.Subscriber
+		if err := json.Unmarshal(dbSubscriber, &subscriber); err != nil {
 			api.handleError(w, 500, err)
 			return
 		}
 
-		// append to Subscribers returned
-		Subscribers = append(Subscribers, follower)
+		// append to subscribers returned
+		subscribers = append(subscribers, subscriber)
 	}
 
-	// encode the Subscribers
+	// encode the subscribers
 	enc := json.NewEncoder(w)
-	enc.Encode(Subscribers)
+	enc.Encode(subscribers)
 }
